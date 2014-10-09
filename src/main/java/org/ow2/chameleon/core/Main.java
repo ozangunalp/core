@@ -20,7 +20,6 @@
 package org.ow2.chameleon.core;
 
 
-import org.ow2.chameleon.core.utils.jul.JulLogManager;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;

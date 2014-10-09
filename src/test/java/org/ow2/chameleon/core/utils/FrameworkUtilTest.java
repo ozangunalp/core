@@ -23,7 +23,6 @@ import com.google.common.collect.Maps;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 
 import static org.fest.assertions.Assertions.assertThat;
@@ -37,12 +36,12 @@ public class FrameworkUtilTest {
 
     @Test
     public void testGetFrameworkFactory() throws Exception {
-        assertThat(FrameworkUtil.getFrameworkFactory(new File(""))).isNotNull();
+        assertThat(FrameworkUtil.getFrameworkFactory()).isNotNull();
     }
 
     @Test
     public void testCreate() throws Exception {
-        assertThat(FrameworkUtil.getFrameworkFactory(new File("")).newFramework(Maps.<String, String>newTreeMap())).isNotNull();
+        assertThat(FrameworkUtil.getFrameworkFactory().newFramework(Maps.<String, String>newTreeMap())).isNotNull();
     }
 
     @Test
