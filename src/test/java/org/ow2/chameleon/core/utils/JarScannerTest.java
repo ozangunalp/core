@@ -25,7 +25,7 @@ import java.io.File;
 import java.util.Set;
 import java.util.jar.JarFile;
 
-import static org.fest.assertions.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class JarScannerTest {
 
@@ -40,8 +40,6 @@ public class JarScannerTest {
         assertThat(JarScanner.version("acme-1-dist.jar")).isEqualTo("1.0.0.dist");
         assertThat(JarScanner.version("acme.jar")).isNull();
         assertThat(JarScanner.version("acme.zip")).isNull();
-
-        System.out.println(JarScanner.version("c3p0-0.9.1.2.jar"));
     }
 
     public static final File JAR_ROOT = new File("src/test/resources/jars");

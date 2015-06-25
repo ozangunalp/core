@@ -49,7 +49,7 @@ public class JulWrapper extends java.util.logging.Logger {
     /**
      * The wrapped logger.
      */
-    private final Logger logger;
+    private final Logger logger; //NOSONAR ignore naming convention - it's a wrapped instance.
 
     /**
      * Creates JUL Wrapper for given name.
@@ -77,11 +77,11 @@ public class JulWrapper extends java.util.logging.Logger {
         if (this.logger.isEnabledFor(level)) {
             String message = record.getMessage();
             try {
-                Object parameters[] = record.getParameters();
+                Object[] parameters = record.getParameters();
                 if (parameters != null && parameters.length != 0) {
                     message = MessageFormat.format(message, parameters);
                 }
-            } catch (Exception ex) {
+            } catch (Exception ex) { // NOSONAR
                 // ignore parameter error
             }
             this.logger.log(null, Logger.FQCN, Level.toLocationAwareLoggerInteger(level), message, null, record.getThrown());
@@ -106,7 +106,12 @@ public class JulWrapper extends java.util.logging.Logger {
      */
     @Override
     public java.util.logging.Level getLevel() {
-        return JulLevels.toJUL(this.logger.getLevel());
+        final Level level = this.logger.getLevel();
+        // The level can be null.
+        if (level == null) {
+            return null;
+        }
+        return JulLevels.toJUL(level);
     }
 
     /**
@@ -169,7 +174,7 @@ public class JulWrapper extends java.util.logging.Logger {
      * @param params parameters used to format the message.
      */
     @Override
-    public void log(java.util.logging.Level level, String msg, Object params[]) {
+    public void log(java.util.logging.Level level, String msg, Object[] params) {
         Level logbackLevel = JulLevels.toSlf4J(level);
 
         if (this.logger.isEnabledFor(logbackLevel)) {

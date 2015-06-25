@@ -22,9 +22,11 @@ package org.ow2.chameleon.core;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
+import org.osgi.framework.ServiceReference;
 import org.osgi.framework.launch.Framework;
 import org.ow2.chameleon.core.activators.*;
 import org.ow2.chameleon.core.hook.HookManager;
+import org.ow2.chameleon.core.services.Stability;
 import org.ow2.chameleon.core.utils.FrameworkManager;
 import org.ow2.chameleon.core.utils.LogbackUtil;
 import org.ow2.chameleon.core.utils.jul.JulLogManager;
@@ -181,10 +183,9 @@ public class Chameleon {
      *
      * @param configuration chameleon's configuration.
      * @return the chameleon logger
-     * @throws java.io.IOException occurs when the logging cannot be configured
      */
-    public static Logger initializeLoggingSystem(ChameleonConfiguration configuration) throws IOException {
-        Logger log = LogbackUtil.configure(configuration);
+    public static Logger initializeLoggingSystem(ChameleonConfiguration configuration) {
+        Logger log = LogbackUtil.configure(configuration); //NOSONAR ignore name issue has we are building the instance.
 
         if (configuration.isInteractiveModeEnabled()) {
             log.debug("interactive mode enabled");
@@ -193,7 +194,7 @@ public class Chameleon {
         return log;
     }
 
-    private void initializeActivatorList(ChameleonConfiguration configuration) throws IOException {
+    private void initializeActivatorList(ChameleonConfiguration configuration) {
         File core = configuration.getDirectory(Constants.CHAMELEON_CORE_PROPERTY, true);
         if (core == null) {
             throw new IllegalArgumentException("The " + Constants.CHAMELEON_CORE_PROPERTY + " property is missing in " +
@@ -222,6 +223,7 @@ public class Chameleon {
         boolean monitoringRuntime = configuration.getBoolean(Constants.CHAMELEON_RUNTIME_MONITORING_PROPERTY, false);
         boolean monitoringApplication = configuration.getBoolean(Constants.CHAMELEON_APPLICATION_MONITORING_PROPERTY, true);
         int monitoringPeriod = configuration.getInt(Constants.CHAMELEON_MONITORING_PERIOD_PROPERTY, 2000);
+        boolean autoRefresh = configuration.getBoolean(Constants.CHAMELEON_AUTO_REFRESH, true);
 
         if (monitoringRuntime) {
             monitor.add(runtime, monitoringPeriod);
@@ -236,34 +238,62 @@ public class Chameleon {
         }
 
         // The deployers
-        activators.add(new BundleDeployer(false));
+        activators.add(new BundleDeployer(false, autoRefresh));
         activators.add(new ConfigDeployer());
+
+        // Stability checker
+        activators.add(new StabilityComputation());
     }
 
     /**
-     * Initializes and Starts the Chameleon frameworks. It configure the
-     * embedded OSGi framework and deploys bundles
+     * Initializes and Starts the Chameleon frameworks. It configures the
+     * embedded OSGi framework and deploys bundles.
      *
+     * @return the current Chameleon instance
      * @throws org.osgi.framework.BundleException if a bundle cannot be installed or started
      *                                            correctly.
      */
-    public void start() throws BundleException {
+    public Chameleon start() throws BundleException {
         hooks.fireConfigured(manager.configuration());
         manager.start();
+        return this;
+    }
+
+    /**
+     * Waits for the stability to be reached.
+     *
+     * @return the current Chameleon instance
+     * @throws IllegalStateException if the stability cannot be reached
+     * @since 1.10.6
+     */
+    public Chameleon waitForStability() {
+        ServiceReference<Stability> reference
+                = context().getServiceReference(Stability.class);
+        if (reference == null) {
+            throw new IllegalStateException("Cannot reach stability - stability service missing");
+        }
+        Stability stability = context().getService(reference);
+
+        if (! stability.waitForStability()) {
+            throw new IllegalStateException("Cannot reach stability");
+        }
+        return this;
     }
 
     /**
      * Stops the underlying framework.
      *
+     * @return the current Chameleon instance
      * @throws org.osgi.framework.BundleException should not happen.
      * @throws java.lang.InterruptedException     if the method is interrupted during the
      *                                            waiting time.
      */
-    public void stop() throws BundleException, InterruptedException {
+    public Chameleon stop() throws BundleException, InterruptedException {
         logger.info("Stopping Chameleon");
         manager.stop();
         logger.info("Chameleon stopped");
         hooks.fireShuttingDown();
+        return this;
     }
 
     /**
